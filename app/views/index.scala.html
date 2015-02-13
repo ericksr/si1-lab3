@@ -1,0 +1,168 @@
+@(seriesList : List[Series], watchedSeriesList : List[Series])
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Séries App</title>
+
+        <!-- JQuery -->
+        <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+        <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <script type="text/javascript" src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        <!-- Mine css-->
+        <link rel="stylesheet" href="@routes.Assets.at("css/stylesheet.css")">
+    </head>
+    <body>
+        <nav class="navbar navbar-default">
+            <div class="navbar-header">
+                <a class="navbar-brand">Séries App</a>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            O que é?
+                        </div>
+                        <div class="panel-body">
+                            Séries App é um sistema para você cadastrar o quanto você assistiu das suas séries preferidas e sempre saber qual o próximo episódio a ser assistido.
+                        </div>
+                    </div>
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            O que são as opções 1, 2 e 3?
+                        </div>
+                        <div class="panel-body">
+                            <form>
+                                <p><b>Opção 1:</b> O sistema recomendará o episódio mais antigo depois do último que você assistiu.</p>
+                                <p><b>Opção 2:</b> O sistema recomendará o episódio mais antigo que você deixou de assistir.</p>
+                                <p><b>Opção 3:</b> O sistema recomendará da mesma maneira que na opção 2, mas não indicará que o próximo episódio a assitir deve ser um episódio X se depois de X 3 outros episódios já tiverem sido assistidos.</p>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="list-group">
+                        <a class="list-group-item active">
+                            Lista de Séries
+                        </a>
+                        <div class="scrollable">
+                            @for(series <- seriesList){
+                                <a class="list-group-item">
+                                    <form method="post" action="@routes.Application.watchSeries(series.getId)" class="pull-right">
+                                        <button type="submit" class="btn btn-primary btn-xs">
+                                            <span class="glyphicon glyphicon-circle-arrow-right" aria-hidden="true"></span>
+                                        </button>
+                                    </form>
+                                    <h5 data-toggle="collapse" data-target="#series@series.getId">
+                                        <strong> @series.getName </strong>
+                                    </h5>
+                                </a>
+                                <div class="collapse" id="series@series.getId">
+                                    @for(season <- series.getSeasons){
+                                        <a class="list-group-item">
+                                            <h5 data-toggle="collapse" data-target="#season@season.getId">
+                                                @(season.getNumber)ª Temporada
+                                            </h5>
+                                        </a>
+                                        <div class="collapse" id="season@season.getId">
+                                            @for(episode <- season.getEpisodes){
+                                                <a class="list-group-item">
+                                                    @episode.getNumber - @episode.getName
+                                                </a>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="list-group">
+                        <a class="list-group-item active">
+                            Séries Assistindo
+                        </a>
+                        <div class="scrollable">
+                        @for(series <- watchedSeriesList){
+                            <a class="list-group-item">
+                                <h5 data-toggle="collapse" data-target="#series@series.getId">
+                                    <strong> @series.getName </strong>
+                                </h5>
+                            </a>
+                            <div class="collapse" id="series@series.getId">
+
+                            <div class="panel panel-default">
+                                <form method="post" action="@routes.Application.recommend(series.getId())">
+                                    <div class="radio">
+                                            <input class="button" type="submit" name="opcao" id="opcao1" value="1">
+                                            <input class="button" type="submit"  name="opcao" id="opcao2" value="2">
+                                            <input class="button" type="submit"  name="opcao" id="opcao3" value="3">
+                                    </div>
+                                </form>
+
+                            </div>
+
+                            @for(season <- series.getSeasons){
+                                <a class="list-group-item">
+                                    @if(season.getStatus == Season.Status.full){
+                                        <span class="label label-success pull-right">Completa</span>
+                                    }
+                                    @if(season.getStatus == Season.Status.incomplete){
+                                        <span class="label label-warning pull-right">Incompleta</span>
+                                    }
+                                    @if(season.getStatus == Season.Status.none){
+                                        <span class="label label-danger pull-right">Não Assitida</span>
+                                    }
+                                    <h5 data-toggle="collapse" data-target="#season@season.getId">
+                                        @(season.getNumber)ª Temporada
+                                    </h5>
+                                </a>
+                                @if(season.getStatus == Season.Status.incomplete){
+                                    <a class="list-group-item list-group-item-warning">
+                                        Próximo Episódio: @season.nextEpisode(series.getSistemaDeRecomendacao)
+                                    </a>
+                                }
+                                <div class="collapse" id="season@season.getId">
+                                @for(episode <- season.getEpisodes){
+                                    @if(episode.isWatched){
+                                        <a class="list-group-item list-group-item-success">
+                                            @episode.getNumber - @episode.getName
+                                        </a>
+                                    }else{
+                                        <a class="list-group-item list-group-item-danger">
+                                            <form method="post" action="@routes.Application.watchEpisode(episode.getId)" class="pull-right">
+                                                <button type="submit" class="btn btn-success btn-xs">
+                                                    <span class="glyphicon glyphicon-ok-sign" aria-hidden="true"></span>
+                                                </button>
+                                            </form>
+                                            @episode.getNumber - @episode.getName
+                                        </a>
+                                    }
+                                }
+                                </div>
+                            }
+                            </div>
+                        }
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+    </body>
+</html>
+
